@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monte Carlo Darts</title>
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+  <style>
+    :root, [data-theme="light"] {
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem; --space-5: 1.25rem;
+      --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem; --space-12: 3rem;
+      --color-bg: #f7f6f2; --color-surface: #f9f8f5; --color-surface-2: #fbfbf9; --color-border: #d4d1ca;
+      --color-text: #28251d; --color-text-muted: #6f6e68; --color-primary: #01696f; --color-primary-hover: #0c4e54;
+      --color-success: #437a22; --color-blue: #006494; --color-error: #a12c7b;
+      --radius-md: 0.5rem; --radius-lg: 0.75rem; --radius-xl: 1rem; --shadow-md: 0 4px 12px rgba(40,37,29,.08);
+      --font-body: 'Satoshi', system-ui, sans-serif;
+    }
+    [data-theme="dark"] {
+      --color-bg: #171614; --color-surface: #1c1b19; --color-surface-2: #201f1d; --color-border: #393836;
+      --color-text: #cdccca; --color-text-muted: #9a9996; --color-primary: #4f98a3; --color-primary-hover: #227f8b;
+      --color-success: #6daa45; --color-blue: #5591c7; --color-error: #d163a7; --shadow-md: 0 4px 12px rgba(0,0,0,.25);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: var(--font-body); font-size: var(--text-base);
+      color: var(--color-text); background: var(--color-bg); line-height: 1.5;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: var(--space-6); }
+    .topbar { display:flex; justify-content:space-between; align-items:center; gap:var(--space-4); margin-bottom:var(--space-6); }
+    .logo { display:flex; align-items:center; gap:var(--space-3); font-weight:700; letter-spacing:.02em; }
+    .logo svg { width: 28px; height: 28px; color: var(--color-primary); }
+    .theme-toggle {
+      display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border:1px solid var(--color-border);
+      border-radius:999px; background:var(--color-surface); color:var(--color-text); cursor:pointer;
+    }
+    .hero { display:grid; grid-template-columns: 340px 1fr; gap: var(--space-6); }
+    .panel {
+      background: var(--color-surface); border: 1px solid rgba(40,37,29,.12); border-radius: var(--radius-xl); box-shadow: var(--shadow-md);
+    }
+    .controls { padding: var(--space-6); }
+    h1 { font-size: var(--text-xl); line-height:1.1; margin:0 0 var(--space-3); }
+    p { margin:0 0 var(--space-4); color: var(--color-text-muted); }
+    .controls-topline {
+      display:flex;
+      align-items:center;
+      gap: var(--space-3);
+      flex-wrap:wrap;
+      margin-bottom: var(--space-3);
+    }
+    .controls-topline label {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+    }
+    select.darts-select {
+      min-height: 40px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      padding: 0.3rem 0.6rem;
+      font-size: var(--text-sm);
+      background: var(--color-surface-2);
+      color: var(--color-text);
+    }
+    .button-row { display:flex; gap:var(--space-3); flex-wrap:wrap; margin:var(--space-4) 0 var(--space-5); }
+    button.action {
+      min-width: 180px; min-height: 44px; padding: .85rem 1.1rem; border: none; border-radius: var(--radius-lg);
+      background: var(--color-primary); color: white; font-weight: 700; cursor: pointer;
+    }
+    button.action:hover { background: var(--color-primary-hover); }
+    button.secondary {
+      min-height:44px; padding:.85rem 1.1rem; border-radius: var(--radius-lg); background: var(--color-surface-2);
+      color: var(--color-text); border:1px solid var(--color-border); cursor:pointer; font-weight:600;
+    }
+    .stats { display:grid; grid-template-columns: 1fr 1fr; gap:var(--space-3); margin-top: var(--space-4); }
+    .stat { background: var(--color-surface-2); border:1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-4); }
+    .stat-label { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .08em; color: var(--color-text-muted); margin-bottom: .35rem; }
+    .stat-value { font-size: var(--text-lg); font-weight: 700; font-variant-numeric: tabular-nums lining-nums; }
+    .note { font-size: var(--text-sm); }
+    .board-panel { padding: var(--space-4); display:flex; flex-direction:column; gap:var(--space-3); }
+    canvas { width:100%; aspect-ratio:1/1; background: var(--color-surface-2); border-radius: var(--radius-lg); border:1px solid var(--color-border); }
+    .status { display:flex; flex-wrap:wrap; gap:var(--space-4); font-size:var(--text-sm); color: var(--color-text-muted); }
+    code.inline { background: var(--color-surface-2); padding:.1rem .35rem; border-radius:.35rem; border:1px solid var(--color-border); }
+    .footer-note { margin-top: var(--space-5); padding: var(--space-4); background: rgba(1,105,111,.08); border-radius: var(--radius-lg); color: var(--color-text); }
+    @media (max-width: 860px) { .hero { grid-template-columns: 1fr; } .wrap { padding: var(--space-4); } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="logo" aria-label="Monte Carlo Darts">
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="6" y="6" width="52" height="52" rx="10" stroke="currentColor" stroke-width="4"/>
+          <circle cx="32" cy="32" r="16" stroke="currentColor" stroke-width="4"/>
+          <circle cx="42" cy="22" r="3.5" fill="currentColor"/>
+        </svg>
+        <span>Monte Carlo Darts</span>
+      </div>
+      <button class="theme-toggle" data-theme-toggle aria-label="Switch theme">◐</button>
+    </div>
+
+    <div class="hero">
+      <section class="panel controls">
+        <h1>Throw random darts</h1>
+        <p>Choose how many darts to throw per click. Points are uniform in [-1, 1] × [-1, 1]; the running fraction inside the circle estimates π.</p>
+
+        <div class="controls-topline">
+          <label for="dartsSelect">Darts per click:</label>
+          <select id="dartsSelect" class="darts-select">
+            <option value="1">1 dart</option>
+            <option value="10" selected>10 darts</option>
+            <option value="100">100 darts</option>
+            <option value="1000">1000 darts</option>
+            <option value="10000">10000 darts</option>
+          </select>
+        </div>
+
+        <div class="button-row">
+          <button id="throwBtn" class="action">Throw 10 darts</button>
+          <button id="clearBtn" class="secondary">Clear</button>
+          <button id="downloadBtn" class="secondary">Download CSV log</button>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">Total darts</div>
+            <div class="stat-value" id="totalCount">0</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Inside circle</div>
+            <div class="stat-value" id="insideCount">0</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Fraction inside</div>
+            <div class="stat-value" id="fractionValue">0.0000</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Monte Carlo π estimate</div>
+            <div class="stat-value" id="piEstimate">0.0000</div>
+          </div>
+        </div>
+        <div class="footer-note note">
+          This page includes browser-side CSV logging and a placeholder for a shared server endpoint if you want all participants writing to one common file.
+        </div>
+      </section>
+
+      <section class="panel board-panel">
+        <canvas id="board" width="720" height="720" aria-label="Square dart board with inscribed circle"></canvas>
+        <div class="status">
+          <span>Last batch: <strong id="lastBatch">0</strong> darts</span>
+          <span>Saved rows: <strong id="savedRows">0</strong></span>
+          <span>Log mode: <strong id="logMode">browser CSV only</strong></span>
+        </div>
+        <p class="note">If you later deploy a shared endpoint, set <code class="inline">window.LOG_ENDPOINT</code> to that URL.</p>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // Theme toggle
+    (() => {
+      const root = document.documentElement;
+      let theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      root.setAttribute('data-theme', theme);
+      const toggle = document.querySelector('[data-theme-toggle]');
+      const paintToggle = () => { toggle.textContent = theme === 'dark' ? '☀' : '◐'; };
+      paintToggle();
+      toggle.addEventListener('click', () => {
+        theme = theme === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', theme);
+        paintToggle();
+      });
+    })();
+
+    const canvas = document.getElementById('board');
+    const ctx = canvas.getContext('2d');
+    const dartsSelect = document.getElementById('dartsSelect');
+    const throwBtn = document.getElementById('throwBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const totalCountEl = document.getElementById('totalCount');
+    const insideCountEl = document.getElementById('insideCount');
+    const fractionEl = document.getElementById('fractionValue');
+    const piEstimateEl = document.getElementById('piEstimate');
+    const lastBatchEl = document.getElementById('lastBatch');
+    const savedRowsEl = document.getElementById('savedRows');
+    const logModeEl = document.getElementById('logMode');
+
+    const state = {
+      points: [],
+      total: 0,
+      inside: 0,
+      csvRows: ['timestamp,participant_id,batch_id,dart_index,x,y,radius_squared,inside_circle'],
+      participantId: crypto.randomUUID ? crypto.randomUUID() : `p-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      batchCounter: 0,
+      dartsPerClick: 10
+    };
+
+    window.LOG_ENDPOINT = window.LOG_ENDPOINT || '';
+    const hasSharedEndpoint = () => typeof window.LOG_ENDPOINT === 'string' && window.LOG_ENDPOINT.trim().length > 0;
+
+    function toCanvasX(x) { return ((x + 1) / 2) * canvas.width; }
+    function toCanvasY(y) { return canvas.height - ((y + 1) / 2) * canvas.height; }
+
+    function drawBoard() {
+      const styles = getComputedStyle(document.documentElement);
+      const bg = styles.getPropertyValue('--color-surface-2').trim();
+      const border = styles.getPropertyValue('--color-border').trim();
+      const text = styles.getPropertyValue('--color-text').trim();
+      const success = styles.getPropertyValue('--color-success').trim();
+      const error = styles.getPropertyValue('--color-error').trim();
+      const blue = styles.getPropertyValue('--color-blue').trim();
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = border;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+      ctx.beginPath();
+      ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2, 0, Math.PI * 2);
+      ctx.strokeStyle = text;
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      ctx.strokeStyle = border;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2, 0); ctx.lineTo(canvas.width / 2, canvas.height);
+      ctx.moveTo(0, canvas.height / 2); ctx.lineTo(canvas.width, canvas.height / 2);
+      ctx.stroke();
+
+      state.points.forEach((p, idx) => {
+        ctx.beginPath();
+        ctx.arc(toCanvasX(p.x), toCanvasY(p.y), 6, 0, Math.PI * 2);
+        ctx.fillStyle = p.inside ? success : error;
+        ctx.globalAlpha = idx >= state.points.length - 10 ? 1 : 0.6;
+        ctx.fill();
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = blue;
+        ctx.stroke();
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    function updateStats() {
+      totalCountEl.textContent = state.total.toString();
+      insideCountEl.textContent = state.inside.toString();
+      const fraction = state.total ? state.inside / state.total : 0;
+      fractionEl.textContent = fraction.toFixed(4);
+      piEstimateEl.textContent = (4 * fraction).toFixed(4);
+      savedRowsEl.textContent = (state.csvRows.length - 1).toString();
+      logModeEl.textContent = hasSharedEndpoint() ? 'shared endpoint + browser CSV backup' : 'browser CSV only';
+    }
+
+    function makeBatch(n) {
+      state.batchCounter += 1;
+      const batchId = `batch-${state.batchCounter}`;
+      const timestamp = new Date().toISOString();
+      const rows = [];
+      const newPoints = [];
+
+      for (let i = 0; i < n; i += 1) {
+        const x = 2 * Math.random() - 1;
+        const y = 2 * Math.random() - 1;
+        const r2 = x * x + y * y;
+        const inside = r2 <= 1;
+        const point = { x, y, r2, inside, timestamp, batchId, dartIndex: i + 1, participantId: state.participantId };
+        newPoints.push(point);
+        rows.push(`${timestamp},${state.participantId},${batchId},${i + 1},${x.toFixed(8)},${y.toFixed(8)},${r2.toFixed(8)},${inside ? 1 : 0}`);
+      }
+      return { batchId, rows, points: newPoints };
+    }
+
+    async function sendToServer(batch) {
+      if (!hasSharedEndpoint()) return false;
+      try {
+        const response = await fetch(window.LOG_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ points: batch.points })
+        });
+        return response.ok;
+      } catch {
+        return false;
+      }
+    }
+
+    async function handleThrow() {
+      const n = state.dartsPerClick;
+      throwBtn.disabled = true;
+      throwBtn.textContent = `Throwing ${n}…`;
+
+      const batch = makeBatch(n);
+      batch.points.forEach((p) => {
+        state.points.push(p);
+        state.total += 1;
+        if (p.inside) state.inside += 1;
+      });
+      state.csvRows.push(...batch.rows);
+
+      lastBatchEl.textContent = batch.points.length.toString();
+      drawBoard();
+      updateStats();
+      await sendToServer(batch);
+
+      throwBtn.disabled = false;
+      throwBtn.textContent = `Throw ${n} darts`;
+    }
+
+    function handleClear() {
+      state.points = [];
+      state.total = 0;
+      state.inside = 0;
+      state.csvRows = ['timestamp,participant_id,batch_id,dart_index,x,y,radius_squared,inside_circle'];
+      state.batchCounter = 0;
+      lastBatchEl.textContent = '0';
+      drawBoard();
+      updateStats();
+    }
+
+    function downloadCSV() {
+      const blob = new Blob([state.csvRows.join('\n')], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'monte-carlo-dart-log.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function syncThrowButtonLabel() {
+      const n = state.dartsPerClick;
+      throwBtn.textContent = `Throw ${n} dart${n === 1 ? '' : 's'}`;
+    }
+
+    dartsSelect.addEventListener('change', () => {
+      const value = parseInt(dartsSelect.value, 10) || 10;
+      state.dartsPerClick = value;
+      syncThrowButtonLabel();
+    });
+
+    throwBtn.addEventListener('click', handleThrow);
+    clearBtn.addEventListener('click', handleClear);
+    downloadBtn.addEventListener('click', downloadCSV);
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', drawBoard);
+    new MutationObserver(drawBoard).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    // Initialize
+    syncThrowButtonLabel();
+    drawBoard();
+    updateStats();
+  </script>
+</body>
+</html>
