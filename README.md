@@ -26,7 +26,7 @@ This package gives you all the tools (and many more) to run Python and the *Jupy
 ### Juptyer Notebook
 
 * Above you can download this entire github repository as a zip file, including the Jupyter 
-Notebook I presented.
+Notebook I presented. Just click the green "<span style="background-color: green;"><> Code</span>" button and select ZIP file to download.
 
 Once you have installed the Ananconda package, you will have Python and Jupyter and will be able to run, edit, and experiment with the code. Try your own experiments!
 
